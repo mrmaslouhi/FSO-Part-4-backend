@@ -77,6 +77,33 @@ test('if likes are missing, default to 0', async () => {
     assert.strictEqual(blogsAfterThePostRequest[blogsAfterThePostRequest.length - 1].likes, 0)
 })
 
+test('should be able to delete a the first blog', async () => {
+    const blogsAtTheStart = await helper.blogsInDb()
+
+    await api
+        .delete(`/api/blogs/${blogsAtTheStart[0].id}`)
+        .expect(204)
+
+    const blogsAfterTheDeleteRequest = await helper.blogsInDb()
+    
+    assert.strictEqual(blogsAfterTheDeleteRequest.length, blogsAtTheStart.length - 1)
+})
+
+test('should be able to update a blog', async () => {
+    const blogsAtTheStart = await helper.blogsInDb()
+
+    const blogToUpdate = blogsAtTheStart[0]
+    const newBlog = { ...blogToUpdate,
+                      likes: 2718281828                
+    }
+
+    await api
+        .put(`/api/blogs/${blogToUpdate.id}`)
+        .send(newBlog)
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+})
+
 after(async () => {
     await mongoose.connection.close()
 })
