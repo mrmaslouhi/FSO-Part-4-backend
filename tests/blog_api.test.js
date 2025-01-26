@@ -1,10 +1,13 @@
-const { test, after, beforeEach } = require('node:test')
+const { test, after, beforeEach, describe } = require('node:test')
 const mongoose = require('mongoose')
 const assert = require('node:assert')
 const supertest = require('supertest')
 const app = require('../app')
 const helper = require('./test_helper')
+const bcryptjs = require('bcryptjs')
+
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 const api = supertest(app)
 
@@ -85,7 +88,7 @@ test('should be able to delete a the first blog', async () => {
         .expect(204)
 
     const blogsAfterTheDeleteRequest = await helper.blogsInDb()
-    
+
     assert.strictEqual(blogsAfterTheDeleteRequest.length, blogsAtTheStart.length - 1)
 })
 
@@ -93,8 +96,9 @@ test('should be able to update a blog', async () => {
     const blogsAtTheStart = await helper.blogsInDb()
 
     const blogToUpdate = blogsAtTheStart[0]
-    const newBlog = { ...blogToUpdate,
-                      likes: 2718281828                
+    const newBlog = {
+        ...blogToUpdate,
+        likes: 2718281828
     }
 
     await api
@@ -102,6 +106,57 @@ test('should be able to update a blog', async () => {
         .send(newBlog)
         .expect(200)
         .expect('Content-Type', /application\/json/)
+})
+
+describe('one user in db', () => {
+    beforeEach(async () => {
+        await User.deleteMany({})
+
+        const passwordHash = await bcryptjs.hash('sirr', 10)
+        const user = new User({ username: 'broski', passwordHash })
+
+        await user.save()
+    })
+
+    test('posting should work', async () => {
+        const usersAtStart = await helper.usersInDb()
+
+        const newUser = {
+            username: 'Anas',
+            password: 'kalimat al morour',
+            name: 'Anas Al-Maslouhi'
+        }
+
+        await api
+            .post('/api/users')
+            .send(newUser)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
+
+        const usersAfterThePostRequest = await helper.usersInDb()
+        assert.strictEqual(usersAfterThePostRequest.length, usersAtStart.length + 1)
+    })
+
+    test('posting fails when username is taken', async () => {
+        const usersAtStart = await helper.usersInDb()
+
+        const newUser = {
+            username: 'broski',
+            password: 'kalimat al morour',
+            name: 'Anas Al-Maslouhi'
+        }
+
+        const result = await api
+            .post('/api/users')
+            .send(newUser)
+            .expect(400)
+            .expect('Content-Type', /application\/json/)
+
+        const usersAtEnd = await helper.usersInDb()
+        assert(result.body.error.includes('expected `username` to be unique'))
+
+        assert.strictEqual(usersAtEnd.length, usersAtStart.length)
+    })
 })
 
 after(async () => {
