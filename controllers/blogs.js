@@ -1,32 +1,31 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
+require('express-async-errors')
 const User = require('../models/user')
-const jwt = require('jsonwebtoken')
-const middleware = require('../utils/middleware')
 
 blogsRouter.get('/', async (request, response) => {
     const blogs = await Blog
-        .find({}).populate('user', {username: 1, name: 1})
+        .find({}).populate('user', { username: 1, name: 1 })
     response.json(blogs)
 })
 
 blogsRouter.get('/:id', async (request, response, next) => {
-    try {
-        const blog = await Blog.findById(request.params.id)
-        if (blog) {
-            response.json(blog)
-        } else {
-            response.status(404).end()
-        }
-    } catch (error) {
-        next(error)
+    const blog = await Blog.findById(request.params.id)
+    if (blog) {
+        response.json(blog)
+    } else {
+        response.status(404).end()
     }
+
 })
 
-blogsRouter.post('/', middleware.userExtractor, async (request, response, next) => {
+blogsRouter.post('/', async (request, response) => {
+    if (!request.token || !request.decodedToken) {
+        return response.status(401).json({ error: 'invalid or missing token' })
+    }
     const body = request.body
 
-    const user = request.user
+    const user = await User.findById(request.decodedToken.id)
 
     const blog = new Blog({
         title: body.title,
@@ -36,34 +35,30 @@ blogsRouter.post('/', middleware.userExtractor, async (request, response, next) 
         likes: body.likes || 0
     })
 
-    try {
-        const savedBlog = await blog.save()
-        user.blogs = user.blogs.concat(savedBlog._id)
-        await user.save()
-        response.status(201).json(savedBlog)
-    } catch (error) {
-        next(error)
-    }
+    const savedBlog = await blog.save()
+    user.blogs = user.blogs.concat(savedBlog._id)
+    await user.save()
+    response.status(201).json(savedBlog)
 })
 
-
-blogsRouter.delete('/:id', middleware.userExtractor, async (request, response, next) => {
-    const user = request.user
-
-    const blog = await Blog.findById(request.params.id)
-    console.log('=>', blog.user.toString())
-
-    if (blog.user.toString() === user.id.toString()) {
-        try {
-            await Blog.findByIdAndDelete(request.params.id)
-            response.status(204).end()
-          } catch(error) {
-            next(error)
-          }
-    } else {
-        return response.status(401).json({ error: 'unauthority to delete blog'})
+blogsRouter.delete('/:id', async (request, response, next) => {
+    if (!request.token || !request.decodedToken) {
+        return response.status(401).json({ error: 'invalid or missing token' })
     }
-    })
+    const user = await User.findById(request.decodedToken.id)
+    const blogToDelete = await Blog.findById(request.params.id)
+
+    try {
+        if (blogToDelete.user.toString() === user.id.toString()) {
+            await Blog.findByIdAndDelete(request.params.id)
+            return response.status(204).end()
+        } else {
+            return response.status(401).json({ error: 'incorrect token' })
+        }
+    } catch (error) {
+        return response.status(401).end()
+    }
+})
 
 blogsRouter.put('/:id', async (request, response, next) => {
     const body = request.body
@@ -75,12 +70,8 @@ blogsRouter.put('/:id', async (request, response, next) => {
         likes: body.likes
     }
 
-    try {
-        const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, { new: true })
-        response.json(updatedBlog)
-    } catch (error) {
-        next(error)
-    }
+    const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, { new: true })
+    response.json(updatedBlog)
 })
 
 module.exports = blogsRouter

@@ -1,10 +1,10 @@
 POST http://localhost:3001/api/blogs
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlBpIEJybyIsImlkIjoiNjc5NjZhZWQ2YTU5OWEwNjU1NTFhNmY0IiwiaWF0IjoxNzM3OTExMTkyfQ.tN17bBg5RpWP3zKdEQRV2iFKFtjTgdZs9BZXzOI6bbk
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im1lZSIsImlkIjoiNjc5YjY1NDQyZmExNTMyYzgxOTY0ODQzIiwiaWF0IjoxNzM4MjM3Mjg1fQ.aYweJQafOUJQ_2hcV0wE_e-VJ_G2OnGxjAmWaACOlp0
 
 {
-    "title": "Orbital Velocity",
-    "author": "Pi AlMaslouhi",
+    "title": "Fiqh",
+    "author": "Anas ibn Maslouhi",
     "url": "https://www.example.com",
-    "userId": "679629ef1239573b6c5beddb"
+    "userId": "679b65442fa1532c81964843"
 }
